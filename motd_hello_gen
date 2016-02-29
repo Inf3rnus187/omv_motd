@@ -3,6 +3,8 @@
 # Server Status Script
 # Version 0.1.2 m
 # Updated: Feb 29th 2016
+# https://github.com/fedya/omv_motd.git
+# License: GPLv3
 
 CPUTIME=$(ps -eo pcpu | awk 'NR>1' | awk '{tot=tot+$1} END {print tot}')
 CPUCORES=$(cat /proc/cpuinfo | grep -c processor)
