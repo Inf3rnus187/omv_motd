@@ -89,4 +89,6 @@ $blue_colour"- CPU average usage"$close_colour         = `echo -e "$green_colour
 $blue_colour"- Memory Usage"$close_colour		    = `echo -e "$green_colour$memory_usage%$close_colour"`/` echo -e "$green_colour$memory_usage_gb$close_colour"` "of" `echo -e "$red_colour$memory_total MB$close_colour"`
 $blue_colour"- Swap in use"$close_colour               = `echo -e "$green_colour$get_swap MB$close_colour"`
 $blue_colour"- Processes"$close_colour		    = `echo -e "$green_colour$get_proc_ps$close_colour"`
-"
+
+$red_colour"Message:"$close_colour `echo -e "$red_colour"put admin message here"$close_colour"`
+" > /etc/motd
