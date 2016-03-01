@@ -9,7 +9,7 @@ Copy script to bindir
 Copy motd service and timer files to systemd service dir
 
 ```bash
-# cp motd.service motd.time /etc/systemd/system/
+# cp motd.service motd.timer /etc/systemd/system/
 ```
 
 Enable timer
