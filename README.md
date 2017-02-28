@@ -15,7 +15,7 @@ Copy motd service and timer files to systemd service dir
 Enable timer
 
 ```bash
-# systemctl enable motd.time
+# systemctl enable motd.timer
 ```
 
 ![Alt text](/image/motd.png?raw=true "OpenMandriva /etc/motd")
