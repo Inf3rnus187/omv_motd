@@ -35,7 +35,7 @@ home_total=$(df -h /home | awk '/\// {print $(NF-4)}')
 root_usage_gb=$(df -h / | awk '/\// {print $(NF-3)}')
 root_total=$(df -h / | awk '/\// {print $(NF-4)}')
 # 52C
-cpu_temp=$(cat /sys/devices/platform/coretemp.0/hwmon/hwmon1/temp4_input | awk '{printf("%d",$1/1000)}')
+cpu_temp=$(cat /sys/devices/platform/coretemp.0/hwmon/hwmon0/temp4_input | awk '{printf("%d",$1/1000)}')
 # 26%/4135 MB of 16041MB
 memory_usage=$(free | awk '/Mem/ {printf("%.0f",(($2-($4+$6+$7))/$2) * 100)}')
 memory_total=$(free -m |  awk '/Mem/ {print $(2)}')
@@ -46,13 +46,17 @@ wipe_waiting=$(docker ps -a -q -f status=exited | wc -l)
 users=$(users)
 RPM_GET_VER=$(rpm -qa --queryformat "%{VERSION}\n" docker)
 get_host_name=$(hostname)
+get_ip_remote=$(exec who am i|awk '{ print $5}' | sed "s/(//" | sed "s/)//")
 get_ip_host=$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1)
-get_os_name=$(cat /etc/redhat-release)
+get_os_name=$(cat /etc/debian_version)
+get_os_pretty_name=$(cat /etc/os-release | grep PRETTY_NAME | awk -F "=" '{ $1 = "" ; print $0 }' | sed 's/"//' | sed 's/"//' | sed "s/ //")
 get_os_loadavg=$(cat /proc/loadavg)
 get_hdd_temp=$(hddtemp -u C -nq $storage)
-get_plat_data=$(uname -orpi)
+get_plat_data=$(uname -srvmo)
 get_proc_ps=$(ps -Afl | wc -l)
 get_swap=$(free -m | tail -n 1 | awk {'print $3'})
+get_number_of_attack=$(awk '/Failed/ {x[$(NF-3)]++} END {for (i in x){printf "%3d %s\n", x[i], i}}' /var/log/auth.log | sort -nr | awk '{ SUM += $1} END { print SUM }')
+get_number_of_attacker=$(awk '/Failed/ {x[$(NF-3)]++} END {for (i in x){printf "%3d %s\n", x[i], i}}' /var/log/auth.log | sort -nr | awk 'END {print NR}')
 get_fail2ban=$(fail2ban-client status sshd | grep -i "Total banned" | awk '{printf $4}')
 get_average_cpu=$(echo "$CPUTIME" / "$CPUCORES" | bc)
 blue_colour="\e\\033[38;5;33m"
@@ -80,36 +84,40 @@ mdadm_status_func(){
 RAID_MD="/dev/md[0-9]"
 # no new line
 
-	for device in $RAID_MD;do
-		active_devices=$(mdadm --detail $device |  grep 'Active Devices :' | awk '{printf "%s:", $4}')
-		failed_devices=$(mdadm --detail $device |  grep 'Failed Devices :' | awk '{printf "%s:", $4}')
-		echo -e -n "$green_colour$device active: [$active_devices]$close_colour" "[$red_colour"failed: $failed_devices"$close_colour"]
-	done
+        for device in $RAID_MD;do
+                active_devices=$(mdadm --detail $device |  grep 'Active Devices :' | awk '{printf "%s:", $4}')
+                failed_devices=$(mdadm --detail $device |  grep 'Failed Devices :' | awk '{printf "%s:", $4}')
+                echo -e -n "$green_colour$device active: [$active_devices]$close_colour" "[$red_colour"failed: $failed_devices"$close_colour"]
+        done
 }
 
-echo -e "
+echo -e \\e[2J\\e[\;H "
 $blue_colour"System Status:"$close_colour
 $blue_colour"Updated at"$close_colour: $green_colour`date`$close_colour
 
 $blue_colour"- Server Name"$close_colour               = `echo -e "$green_colour$get_host_name$close_colour"`
 $blue_colour"- Public IP"$close_colour                 = `echo -e "$green_colour$get_ip_host$close_colour"`
+$blue_colour"- Remote IP"$close_colour                 = `echo -e "$green_colour$get_ip_remote$close_colour"`
+$blue_colour"- OS Name"$close_colour                   = `echo -e "$green_colour$get_os_pretty_name$close_colour"`
 $blue_colour"- OS Version"$close_colour                = `echo -e "$green_colour$get_os_name$close_colour"`
 $blue_colour"- Load Averages"$close_colour             = `echo -e "$green_colour$get_os_loadavg$close_colour"`
-$blue_colour"- Usage of /"$close_colour		    = `echo -e "$green_colour$root_usage%$close_colour"`/`echo -e "$green_colour$root_usage_gb$close_colour"` "of" `echo -e "$red_colour$root_total$close_colour"`
-$blue_colour"- Usage of /home"$close_colour	    = `echo -e "$green_colour$home_usage_gb$close_colour"`/`echo -e "$red_colour$home_total$close_colour"` 
-$blue_colour"- RAID status"$close_colour		    = `mdadm_status_func`
+$blue_colour"- Usage of /"$close_colour             = `echo -e "$green_colour$root_usage%$close_colour"`/`echo -e "$green_colour$root_usage_gb$close_colour"` "of" `echo -e "$red_colour$root_total$close_colour"`
+$blue_colour"- Usage of /home"$close_colour         = `echo -e "$green_colour$home_usage_gb$close_colour"`/`echo -e "$red_colour$home_total$close_colour"`
+$blue_colour"- RAID status"$close_colour                    = `mdadm_status_func`
 $blue_colour"- System Uptime"$close_colour             = `echo -e "$green_colour$UP$close_colour"`
-$blue_colour"- Logged users"$close_colour		    = `echo -e "$light_blue_colour$users$close_colour"`
+$blue_colour"- Logged users"$close_colour                   = `echo -e "$light_blue_colour$users$close_colour"`
 $blue_colour"- Platform Data"$close_colour             = `echo -e "$green_colour$get_plat_data$close_colour"`
+$blue_colour"- Number of SSH Attacker"$close_colour    = `echo -e "$red_colour[$get_number_of_attacker] ip $close_colour"`
+$blue_colour"- Number of SSH Attack"$close_colour      = `echo -e "$red_colour[$get_number_of_attack] attempt $close_colour"`
 $blue_colour"- Fail2ban Status"$close_colour           = `echo -e "$red_colour[$get_fail2ban] ip banned$close_colour"`
-$blue_colour"- Docker"$close_colour		    = `echo -e "$green_colour[$RPM_GET_VER]$close_colour"` `echo -e $green_colour[$docker_active] running:$close_colour "$green_colour[$docker_containers]" wipe waiting:$close_colour ["$red_colour$wipe_waiting$close_colour"]`
-$blue_colour"- CPU temp"$close_colour		    = `echo -e "$yellow_colour$cpu_temp C$close_colour"`
-$blue_colour"- HDD temp"$close_colour		    = `echo -e "$yellow_colour$get_hdd_temp C$close_colour"`
+$blue_colour"- Docker"$close_colour                 = `echo -e "$green_colour[$RPM_GET_VER]$close_colour"` `echo -e $green_colour[$docker_active] running:$close_colour "$green_colour[$docker_containers]" wipe waiting:$close_colour ["$red_colour$wipe_waiting$close_colour"]`
+$blue_colour"- CPU temp"$close_colour               = `echo -e "$yellow_colour$cpu_temp C$close_colour"`
+$blue_colour"- HDD temp"$close_colour               = `echo -e "$yellow_colour$get_hdd_temp C$close_colour"`
 $blue_colour"- CPU average usage"$close_colour         = `echo -e "$green_colour$get_average_cpu%$close_colour"`
-$blue_colour"- Memory Usage"$close_colour		    = `echo -e "$green_colour$memory_usage%$close_colour"`/` echo -e "$green_colour$memory_usage_gb$close_colour"` "of" `echo -e "$red_colour$memory_total MB$close_colour"`
+$blue_colour"- Memory Usage"$close_colour                   = `echo -e "$green_colour$memory_usage%$close_colour"`/` echo -e "$green_colour$memory_usage_gb$close_colour"` "of" `echo -e "$red_colour$memory_total MB$close_colour"`
 $blue_colour"- Swap in use"$close_colour               = `echo -e "$green_colour$get_swap MB$close_colour"`
-$blue_colour"- Processes"$close_colour		    = `echo -e "$green_colour$get_proc_ps$close_colour"`
-$blue_colour"- Networking"$close_colour		    = `echo -e "$green_colour$interface: upload(tx) $TKBPS kb/s download(rx) $RKBPS kb/s$close_colour"`
+$blue_colour"- Processes"$close_colour              = `echo -e "$green_colour$get_proc_ps$close_colour"`
+$blue_colour"- Networking"$close_colour             = `echo -e "$green_colour$interface: upload(tx) $TKBPS kb/s download(rx) $RKBPS kb/s$close_colour"`
 
 $red_colour"Message:"$close_colour `echo -e "$red_colour"put admin message here"$close_colour"`
 " > /etc/motd
