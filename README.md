@@ -18,4 +18,4 @@ Enable timer
 # systemctl enable motd.timer
 ```
 
-![Alt text](/motd.png?raw=true "OpenMandriva /etc/motd")
+![Alt text](.motd.png?raw=true "OpenMandriva /etc/motd")
